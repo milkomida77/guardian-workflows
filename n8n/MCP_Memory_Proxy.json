@@ -1,0 +1,80 @@
+{
+  "name": "MCP Memory Proxy - Knowledge Graph",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mcp-memory",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-memory",
+      "name": "Webhook MCP Memory",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Memory operations router\nconst input = $input.all()[0].json;\nconst operation = input.operation;\nconst data = input.data;\n\nswitch(operation) {\n  case 'read_graph':\n    return { operation: 'read_graph', data: {} };\n  case 'search_nodes':\n    return { operation: 'search_nodes', data: { query: data.query } };\n  case 'create_entities':\n    return { operation: 'create_entities', data: { entities: data.entities } };\n  case 'add_observations':\n    return { operation: 'add_observations', data: { observations: data.observations } };\n  case 'open_nodes':\n    return { operation: 'open_nodes', data: { names: data.names } };\n  default:\n    return { operation: 'unknown', error: 'Unknown operation: ' + operation };\n}"
+      },
+      "id": "router",
+      "name": "Route Memory Operation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3100/memory/{{ $json.operation }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.data) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "memory-call",
+      "name": "Call Memory Service",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, operation: $('Route Memory Operation').item.json.operation, result: $json }) }}"
+      },
+      "id": "respond",
+      "name": "Respond with Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [850, 300]
+    }
+  ],
+  "connections": {
+    "Webhook MCP Memory": {
+      "main": [[{"node": "Route Memory Operation", "type": "main", "index": 0}]]
+    },
+    "Route Memory Operation": {
+      "main": [[{"node": "Call Memory Service", "type": "main", "index": 0}]]
+    },
+    "Call Memory Service": {
+      "main": [[{"node": "Respond with Result", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": ["MCP", "Proxy", "Memory", "ChromaDB"]
+}
