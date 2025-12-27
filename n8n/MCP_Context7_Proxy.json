@@ -1,0 +1,112 @@
+{
+  "name": "MCP Context7 Proxy - Documentation Live",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mcp-docs",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-docs",
+      "name": "Webhook MCP Docs",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.context7.io/v1/resolve",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "libraryName",
+              "value": "={{ $json.library }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "resolve-library",
+      "name": "Resolve Library ID",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.context7.io/v1/docs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "libraryId",
+              "value": "={{ $json.libraryId }}"
+            },
+            {
+              "name": "topic",
+              "value": "={{ $('Webhook MCP Docs').item.json.topic }}"
+            },
+            {
+              "name": "tokens",
+              "value": "10000"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-docs",
+      "name": "Get Library Docs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, library: $('Webhook MCP Docs').item.json.library, docs: $json }) }}"
+      },
+      "id": "respond",
+      "name": "Respond with Docs",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [850, 300]
+    }
+  ],
+  "connections": {
+    "Webhook MCP Docs": {
+      "main": [[{"node": "Resolve Library ID", "type": "main", "index": 0}]]
+    },
+    "Resolve Library ID": {
+      "main": [[{"node": "Get Library Docs", "type": "main", "index": 0}]]
+    },
+    "Get Library Docs": {
+      "main": [[{"node": "Respond with Docs", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": ["MCP", "Proxy", "Context7", "Documentation"]
+}
